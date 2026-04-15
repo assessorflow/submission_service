@@ -1,0 +1,5 @@
+gcs-credentials.json
+grpc-stubs/
+__pycache__/
+*.pyc
+.env
