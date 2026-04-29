@@ -1,6 +1,6 @@
 """gRPC server for Assessment Submission Service.
 
-All 13 internal RPCs delegate to the same repository that REST endpoints use.
+All 16 internal RPCs delegate to the same repository that REST endpoints use.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ logger = structlog.get_logger(__name__)
 
 
 class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
-    """Implements all 13 gRPC RPCs defined in submission.proto."""
+    """Implements all 16 gRPC RPCs defined in submission.proto."""
 
     # 1. GetAssessmentConfig
     async def GetAssessmentConfig(self, request, context):
@@ -201,7 +201,48 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
             status="success",
         )
 
-    # 13. StartWorkflow
+    # 13. GetGroupMemberSubmissions
+    async def GetGroupMemberSubmissions(self, request, context):
+        result = await repo.get_group_member_submissions(
+            group_id=request.group_id,
+            question_id=request.question_id,
+        )
+        submissions = [
+            submission_pb2.GroupMemberSubmission(
+                participant_id=str(s.get("participant_id", "")),
+                participant_email=s.get("participant_email", ""),
+                answer_content=s.get("answer_content", ""),
+            )
+            for s in result.get("submissions", [])
+        ]
+        return submission_pb2.GetGroupMemberSubmissionsResponse(
+            group_id=result.get("group_id", ""),
+            group_name=result.get("group_name", ""),
+            question_id=result.get("question_id", ""),
+            question_text=result.get("question_text", ""),
+            submissions=submissions,
+        )
+
+    # 14. UpdateAssessmentStatus
+    async def UpdateAssessmentStatus(self, request, context):
+        await repo.update_assessment_status(
+            assessment_id=request.assessment_id,
+            status=request.status,
+            workflow_id=request.workflow_id or None,
+        )
+        return submission_pb2.UpdateAssessmentStatusResponse(status="updated")
+
+    # 15. UpdateMaterialValidation
+    async def UpdateMaterialValidation(self, request, context):
+        await repo.update_material_validation(
+            material_id=request.material_id,
+            readiness_status=request.readiness_status,
+            validation_reason_code=request.validation_reason_code or None,
+            validation_message=request.validation_message or None,
+        )
+        return submission_pb2.UpdateMaterialValidationResponse(status="updated")
+
+    # 16. StartWorkflow
     async def StartWorkflow(self, request, context):
         from submission_service.services import pubsub
         import uuid

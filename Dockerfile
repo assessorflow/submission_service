@@ -12,7 +12,8 @@ COPY proto/ proto/
 RUN pip install --no-cache-dir .
 
 # Generate gRPC stubs from local proto files
-RUN python -m grpc_tools.protoc \
+RUN mkdir -p grpc-stubs \
+    && python -m grpc_tools.protoc \
     -Iproto \
     --python_out=grpc-stubs \
     --grpc_python_out=grpc-stubs \

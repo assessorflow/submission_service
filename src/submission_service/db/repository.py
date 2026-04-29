@@ -8,7 +8,7 @@ All multi-step operations use asyncpg transactions (C-4 fix).
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -74,6 +74,42 @@ async def get_assessment_config_by_workflow(workflow_id: str) -> dict[str, Any] 
         workflow_id,
     )
     return _row_to_dict(row) if row else None
+
+
+async def list_assessments(
+    assessor_id: str, status: str | None = None, page: int = 1, page_size: int = 10,
+) -> tuple[list[dict[str, Any]], int]:
+    pool = await get_pool()
+    offset = (page - 1) * page_size
+
+    if status:
+        count = await pool.fetchval(
+            "SELECT COUNT(*) FROM assessment_configs WHERE assessor_id = $1 AND status = $2",
+            UUID(assessor_id), status,
+        )
+        rows = await pool.fetch(
+            """
+            SELECT * FROM assessment_configs
+            WHERE assessor_id = $1 AND status = $2
+            ORDER BY created_at DESC LIMIT $3 OFFSET $4
+            """,
+            UUID(assessor_id), status, page_size, offset,
+        )
+    else:
+        count = await pool.fetchval(
+            "SELECT COUNT(*) FROM assessment_configs WHERE assessor_id = $1",
+            UUID(assessor_id),
+        )
+        rows = await pool.fetch(
+            """
+            SELECT * FROM assessment_configs
+            WHERE assessor_id = $1
+            ORDER BY created_at DESC LIMIT $2 OFFSET $3
+            """,
+            UUID(assessor_id), page_size, offset,
+        )
+
+    return [_row_to_dict(r) for r in rows], count
 
 
 async def update_assessment_status(assessment_id: str, status: str, workflow_id: str | None = None) -> None:
@@ -201,21 +237,6 @@ async def get_materials(assessment_id: str, unvalidated_only: bool = False) -> l
     return [_row_to_dict(r) for r in rows]
 
 
-async def update_material_validation(
-    material_id: str, readiness_status: str,
-    reason_code: str | None = None, message: str | None = None,
-) -> None:
-    pool = await get_pool()
-    await pool.execute(
-        """
-        UPDATE assessment_materials
-        SET readiness_status = $1, validation_reason_code = $2, validation_message = $3
-        WHERE id = $4
-        """,
-        readiness_status, reason_code, message, UUID(material_id),
-    )
-
-
 # ---------------------------------------------------------------------------
 # assessment_rubrics
 # ---------------------------------------------------------------------------
@@ -235,9 +256,27 @@ async def add_rubric(
     return _row_to_dict(row)
 
 
+async def get_rubrics(assessment_id: str) -> list[dict[str, Any]]:
+    pool = await get_pool()
+    rows = await pool.fetch(
+        "SELECT * FROM assessment_rubrics WHERE assessment_id = $1 ORDER BY created_at",
+        UUID(assessment_id),
+    )
+    return [_row_to_dict(r) for r in rows]
+
+
 # ---------------------------------------------------------------------------
 # question_sets
 # ---------------------------------------------------------------------------
+
+async def get_question_set_by_workflow(workflow_id: str) -> dict[str, Any] | None:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        "SELECT * FROM question_sets WHERE workflow_id = $1 ORDER BY created_at DESC LIMIT 1",
+        workflow_id,
+    )
+    return _row_to_dict(row) if row else None
+
 
 async def create_question_set(workflow_id: str) -> dict[str, Any]:
     pool = await get_pool()
@@ -260,14 +299,6 @@ async def increment_question_set_iteration(question_set_id: str) -> dict[str, An
         UUID(question_set_id),
     )
     return _row_to_dict(row)
-
-
-async def update_question_set_status(question_set_id: str, status: str) -> None:
-    pool = await get_pool()
-    await pool.execute(
-        "UPDATE question_sets SET status = $1, updated_at = now() WHERE id = $2",
-        status, UUID(question_set_id),
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -546,6 +577,91 @@ async def create_report(
         json.dumps(report_content),
     )
     return _row_to_dict(row)
+
+
+async def get_report(report_id: str) -> dict[str, Any] | None:
+    pool = await get_pool()
+    row = await pool.fetchrow(
+        "SELECT * FROM participant_reports WHERE id = $1",
+        UUID(report_id),
+    )
+    return _row_to_dict(row) if row else None
+
+
+async def get_reports_for_assessment(assessment_id: str) -> list[dict[str, Any]]:
+    """Get all participant reports for an assessment, joining evaluation + participant data."""
+    pool = await get_pool()
+    rows = await pool.fetch(
+        """
+        SELECT pr.*, e.total_score, e.max_score, e.submission_id,
+               ap.email AS participant_email
+        FROM participant_reports pr
+        JOIN evaluations e ON e.id = pr.evaluation_id
+        JOIN assessment_participants ap ON ap.id = pr.participant_id
+              AND ap.assessment_id = $1
+        WHERE pr.workflow_id = (
+            SELECT workflow_id FROM assessment_configs WHERE id = $1
+        )
+        ORDER BY pr.created_at
+        """,
+        UUID(assessment_id),
+    )
+    return [_row_to_dict(r) for r in rows]
+
+
+async def get_group_member_submissions(
+    group_id: str, question_id: str,
+) -> dict[str, Any]:
+    """Get all group members' answers for a specific question."""
+    pool = await get_pool()
+    # Get group info
+    group_row = await pool.fetchrow(
+        "SELECT * FROM participant_groups WHERE id = $1", UUID(group_id),
+    )
+    # Get question text
+    question_row = await pool.fetchrow(
+        "SELECT content FROM approved_questions WHERE id = $1", UUID(question_id),
+    )
+    # Get all member answers
+    rows = await pool.fetch(
+        """
+        SELECT ap.id AS participant_id, ap.email AS participant_email,
+               pa.answer_content
+        FROM participant_group_members pgm
+        JOIN assessment_participants ap ON ap.id = pgm.participant_id
+        JOIN participant_submissions ps ON ps.participant_id = ap.id
+              AND ps.assessment_id = (SELECT assessment_id FROM participant_groups WHERE id = $1)
+        JOIN participant_answers pa ON pa.submission_id = ps.id AND pa.question_id = $2
+        WHERE pgm.group_id = $1
+        """,
+        UUID(group_id), UUID(question_id),
+    )
+    return {
+        "group_id": group_id,
+        "group_name": group_row["group_name"] if group_row else "",
+        "question_id": question_id,
+        "question_text": question_row["content"] if question_row else "",
+        "submissions": [_row_to_dict(r) for r in rows],
+    }
+
+
+async def update_material_validation(
+    material_id: str,
+    readiness_status: str,
+    validation_reason_code: str | None = None,
+    validation_message: str | None = None,
+) -> None:
+    pool = await get_pool()
+    await pool.execute(
+        """
+        UPDATE assessment_materials
+        SET readiness_status = $1, validation_reason_code = $2,
+            validation_message = $3
+        WHERE id = $4
+        """,
+        readiness_status, validation_reason_code, validation_message,
+        UUID(material_id),
+    )
 
 
 # ---------------------------------------------------------------------------
