@@ -737,7 +737,7 @@ async def access_assessment(assessment_id: str, token: str):
             raise HTTPException(403, "Assessment deadline has passed")
 
     # Create submission record (idempotent via ON CONFLICT)
-    submission = await repo.create_submission(assessment_id, participant_id)
+    await repo.create_submission(assessment_id, participant_id)
 
     # Update invitation status
     await repo.update_participant_invitation_status(participant_id, "accepted")

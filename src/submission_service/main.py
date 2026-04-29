@@ -89,7 +89,7 @@ def _error_response(status: int, error: str, message: str) -> JSONResponse:
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError):
     errors = "; ".join(
-        f"{'.'.join(str(l) for l in e['loc'])}: {e['msg']}" for e in exc.errors()
+        f"{'.'.join(str(part) for part in e['loc'])}: {e['msg']}" for e in exc.errors()
     )
     return _error_response(400, "Bad Request", errors)
 

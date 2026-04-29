@@ -172,8 +172,8 @@ async def main():
 
     print("\n" + "=" * 60)
     print("gRPC test complete!")
-    print(f"  Tested: 1, 1b, 2, 2b, 3, 4, 5, 6, 7, 12, 13")
-    print(f"  Skipped: 8, 9, 10, 11 (need full workflow data)")
+    print("  Tested: 1, 1b, 2, 2b, 3, 4, 5, 6, 7, 12, 13")
+    print("  Skipped: 8, 9, 10, 11 (need full workflow data)")
     print("=" * 60)
 
 
