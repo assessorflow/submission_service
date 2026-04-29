@@ -6,6 +6,7 @@ Overrides JWT auth with a mock user so tests don't need Identity Service.
 
 from typing import AsyncGenerator
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
