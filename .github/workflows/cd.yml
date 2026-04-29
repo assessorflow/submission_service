@@ -11,9 +11,9 @@ permissions:
 env:
   GCP_PROJECT_ID: aflow-491809
   GCP_REGION: asia-southeast1
-  AR_REPO: assessorflow
+  AR_REPO: submission-service
   SERVICE_NAME: submission-service
-  IMAGE: asia-southeast1-docker.pkg.dev/aflow-491809/assessorflow/submission-service
+  IMAGE: asia-southeast1-docker.pkg.dev/aflow-491809/submission-service/submission-service
 
 jobs:
   # ================================================================
