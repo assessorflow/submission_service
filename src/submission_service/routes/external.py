@@ -57,7 +57,9 @@ class CreateAssessmentRequest(BaseModel):
     @classmethod
     def validate_difficulty(cls, v):
         if v not in VALID_DIFFICULTIES:
-            raise ValueError(f"Invalid difficulty_level. Must be one of: {VALID_DIFFICULTIES}")
+            raise ValueError(
+                f"Invalid difficulty_level. Must be one of: {VALID_DIFFICULTIES}"
+            )
         return v
 
     @field_validator("web_research_mode")
@@ -80,10 +82,15 @@ class DistributeRequest(BaseModel):
 # 1. POST /api/v1/assessments — Create assessment config
 # ---------------------------------------------------------------------------
 
+
 @router.post("/assessments")
-async def create_assessment(req: CreateAssessmentRequest, user: UserContext = Depends(get_current_user)):
+async def create_assessment(
+    req: CreateAssessmentRequest, user: UserContext = Depends(get_current_user)
+):
     """Create a new assessment configuration."""
-    logger.info("create_assessment", title=req.assessment_title, assessor_id=user.user_id)
+    logger.info(
+        "create_assessment", title=req.assessment_title, assessor_id=user.user_id
+    )
 
     config = await repo.create_assessment_config(
         assessor_id=user.user_id,
@@ -108,7 +115,9 @@ async def create_assessment(req: CreateAssessmentRequest, user: UserContext = De
         for member_email in group.get("members", []):
             # Find participant by email
             participants = await repo.get_participants(assessment_id)
-            participant = next((p for p in participants if p["email"] == member_email), None)
+            participant = next(
+                (p for p in participants if p["email"] == member_email), None
+            )
             if participant:
                 await repo.add_group_member(g["id"], participant["id"])
 
@@ -118,6 +127,7 @@ async def create_assessment(req: CreateAssessmentRequest, user: UserContext = De
 # ---------------------------------------------------------------------------
 # 1b. GET /api/v1/assessments — List assessments (assessor dashboard)
 # ---------------------------------------------------------------------------
+
 
 @router.get("/assessments")
 async def list_assessments(
@@ -143,8 +153,11 @@ async def list_assessments(
 # 2. GET /api/v1/assessments/:id — Get assessment details
 # ---------------------------------------------------------------------------
 
+
 @router.get("/assessments/{assessment_id}")
-async def get_assessment(assessment_id: str, user: UserContext = Depends(get_current_user)):
+async def get_assessment(
+    assessment_id: str, user: UserContext = Depends(get_current_user)
+):
     """Get assessment details including participants and materials."""
     config = await repo.get_assessment_config(assessment_id)
     if not config:
@@ -164,8 +177,11 @@ async def get_assessment(assessment_id: str, user: UserContext = Depends(get_cur
 # 2c. GET /api/v1/assessments/:id/status — Workflow status polling
 # ---------------------------------------------------------------------------
 
+
 @router.get("/assessments/{assessment_id}/status")
-async def get_assessment_status(assessment_id: str, user: UserContext = Depends(get_current_user)):
+async def get_assessment_status(
+    assessment_id: str, user: UserContext = Depends(get_current_user)
+):
     """Get assessment workflow status for frontend polling.
 
     Per api_contract.md Section 2.8.1.
@@ -186,8 +202,13 @@ async def get_assessment_status(assessment_id: str, user: UserContext = Depends(
 # 2b. GET /api/v1/assessments/:id/materials — Get materials for an assessment
 # ---------------------------------------------------------------------------
 
+
 @router.get("/assessments/{assessment_id}/materials")
-async def get_materials(assessment_id: str, source: str | None = None, user: UserContext = Depends(get_current_user)):
+async def get_materials(
+    assessment_id: str,
+    source: str | None = None,
+    user: UserContext = Depends(get_current_user),
+):
     """Get materials for an assessment. Used by Validator Agent to fetch file metadata."""
     config = await repo.get_assessment_config(assessment_id)
     if not config:
@@ -205,6 +226,7 @@ async def get_materials(assessment_id: str, source: str | None = None, user: Use
 # ---------------------------------------------------------------------------
 # 3. POST /api/v1/assessments/:id/materials — Upload material file
 # ---------------------------------------------------------------------------
+
 
 @router.post("/assessments/{assessment_id}/materials")
 async def upload_material(
@@ -226,7 +248,9 @@ async def upload_material(
     )
 
     # Extract file extension (schema.md expects: pdf, docx, png, jpg — not full MIME type)
-    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "unknown"
+    ext = (
+        file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "unknown"
+    )
 
     material = await repo.add_material(
         assessment_id=assessment_id,
@@ -242,6 +266,7 @@ async def upload_material(
 # ---------------------------------------------------------------------------
 # 4. POST /api/v1/assessments/:id/rubrics — Upload rubric file
 # ---------------------------------------------------------------------------
+
 
 @router.post("/assessments/{assessment_id}/rubrics")
 async def upload_rubric(
@@ -262,7 +287,9 @@ async def upload_rubric(
         folder="rubrics",
     )
 
-    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "unknown"
+    ext = (
+        file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "unknown"
+    )
 
     rubric = await repo.add_rubric(
         assessment_id=assessment_id,
@@ -278,8 +305,11 @@ async def upload_rubric(
 # 4b. GET /api/v1/assessments/:id/rubrics — List rubrics
 # ---------------------------------------------------------------------------
 
+
 @router.get("/assessments/{assessment_id}/rubrics")
-async def list_rubrics(assessment_id: str, user: UserContext = Depends(get_current_user)):
+async def list_rubrics(
+    assessment_id: str, user: UserContext = Depends(get_current_user)
+):
     """List uploaded rubrics for an assessment. Per api_contract.md Section 2.2b.2."""
     config = await repo.get_assessment_config(assessment_id)
     if not config:
@@ -293,8 +323,11 @@ async def list_rubrics(assessment_id: str, user: UserContext = Depends(get_curre
 # 4c. GET /api/v1/assessments/:id/materials/validation-status — Validation polling
 # ---------------------------------------------------------------------------
 
+
 @router.get("/assessments/{assessment_id}/materials/validation-status")
-async def get_validation_status(assessment_id: str, user: UserContext = Depends(get_current_user)):
+async def get_validation_status(
+    assessment_id: str, user: UserContext = Depends(get_current_user)
+):
     """Get validation status for all materials. Frontend polls this during Phase 3.
 
     Per api_contract.md Section 2.2.4.
@@ -335,21 +368,28 @@ async def get_validation_status(assessment_id: str, user: UserContext = Depends(
 # 5. POST /api/v1/assessments/:id/start — Start workflow
 # ---------------------------------------------------------------------------
 
+
 @router.post("/assessments/{assessment_id}/start")
-async def start_workflow(assessment_id: str, user: UserContext = Depends(get_current_user)):
+async def start_workflow(
+    assessment_id: str, user: UserContext = Depends(get_current_user)
+):
     """Start the assessment workflow — publishes workflow.start to Pub/Sub."""
     config = await repo.get_assessment_config(assessment_id)
     if not config:
         raise HTTPException(404, "Assessment not found")
     if config["status"] != "draft":
-        raise HTTPException(400, f"Cannot start workflow — status is '{config['status']}'")
+        raise HTTPException(
+            400, f"Cannot start workflow — status is '{config['status']}'"
+        )
 
     # Generate workflow_id
     workflow_id = f"wf_{uuid.uuid4().hex[:12]}"
     correlation_id = f"corr_{uuid.uuid4().hex[:12]}"
 
     # Update assessment with workflow_id and status
-    await repo.update_assessment_status(assessment_id, "material_validation", workflow_id=workflow_id)
+    await repo.update_assessment_status(
+        assessment_id, "material_validation", workflow_id=workflow_id
+    )
 
     # Publish to Pub/Sub
     await pubsub.publish_workflow_start(
@@ -358,7 +398,9 @@ async def start_workflow(assessment_id: str, user: UserContext = Depends(get_cur
         correlation_id=correlation_id,
     )
 
-    logger.info("workflow_started", assessment_id=assessment_id, workflow_id=workflow_id)
+    logger.info(
+        "workflow_started", assessment_id=assessment_id, workflow_id=workflow_id
+    )
 
     return {
         "workflow_id": workflow_id,
@@ -371,6 +413,7 @@ async def start_workflow(assessment_id: str, user: UserContext = Depends(get_cur
 # ---------------------------------------------------------------------------
 # 6. GET /api/v1/assessments/:id/generated-questions — Get draft questions
 # ---------------------------------------------------------------------------
+
 
 @router.get("/assessments/{assessment_id}/generated-questions")
 async def get_generated_questions(
@@ -396,15 +439,22 @@ async def get_generated_questions(
         q.pop("structured_answer", None)
         q.pop("non_structured_model_answer", None)
 
-    return {"question_set_id": question_set_id, "questions": questions, "count": len(questions)}
+    return {
+        "question_set_id": question_set_id,
+        "questions": questions,
+        "count": len(questions),
+    }
 
 
 # ---------------------------------------------------------------------------
 # 6b. GET /api/v1/assessments/:id/approved-questions — Get approved questions
 # ---------------------------------------------------------------------------
 
+
 @router.get("/assessments/{assessment_id}/approved-questions")
-async def get_approved_questions(assessment_id: str, user: UserContext = Depends(get_current_user)):
+async def get_approved_questions(
+    assessment_id: str, user: UserContext = Depends(get_current_user)
+):
     """Get approved questions (post-HITL). Per api_contract.md Section 2.4.3.
 
     Strips answers — assessor views the approved question list only.
@@ -433,8 +483,13 @@ async def get_approved_questions(assessment_id: str, user: UserContext = Depends
 # 7. POST /api/v1/assessments/:id/review/approve — HITL question approval
 # ---------------------------------------------------------------------------
 
+
 @router.post("/assessments/{assessment_id}/review/approve")
-async def approve_questions(assessment_id: str, req: ApproveQuestionsRequest, user: UserContext = Depends(get_current_user)):
+async def approve_questions(
+    assessment_id: str,
+    req: ApproveQuestionsRequest,
+    user: UserContext = Depends(get_current_user),
+):
     """Assessor approves/rejects generated questions (Phase 8 HITL).
 
     Per api_contract.md Section 2.4.2: accepts removed_question_ids.
@@ -447,7 +502,9 @@ async def approve_questions(assessment_id: str, req: ApproveQuestionsRequest, us
     # Find the latest question_set for this assessment via workflow_id
     workflow_id = config.get("workflow_id")
     if not workflow_id:
-        raise HTTPException(400, "Assessment has no workflow — cannot approve questions")
+        raise HTTPException(
+            400, "Assessment has no workflow — cannot approve questions"
+        )
 
     question_set = await repo.get_question_set_by_workflow(workflow_id)
     if not question_set:
@@ -462,7 +519,9 @@ async def approve_questions(assessment_id: str, req: ApproveQuestionsRequest, us
     kept_question_ids = [qid for qid in all_ids if qid not in removed_ids]
 
     if not kept_question_ids:
-        raise HTTPException(400, "Cannot remove all questions — at least one must be kept")
+        raise HTTPException(
+            400, "Cannot remove all questions — at least one must be kept"
+        )
 
     result = await repo.approve_questions(
         assessment_id=assessment_id,
@@ -495,8 +554,13 @@ async def approve_questions(assessment_id: str, req: ApproveQuestionsRequest, us
 # 8. POST /api/v1/assessments/:id/invite — Send invitations
 # ---------------------------------------------------------------------------
 
+
 @router.post("/assessments/{assessment_id}/invite")
-async def send_invitations(assessment_id: str, req: DistributeRequest, user: UserContext = Depends(get_current_user)):
+async def send_invitations(
+    assessment_id: str,
+    req: DistributeRequest,
+    user: UserContext = Depends(get_current_user),
+):
     """Send assessment invitations to selected participants.
 
     Per api_contract.md Section 2.4.5.
@@ -537,8 +601,11 @@ async def send_invitations(assessment_id: str, req: DistributeRequest, user: Use
 # 9. POST /api/v1/assessments/:id/reports/distribute — Send reports
 # ---------------------------------------------------------------------------
 
+
 @router.post("/assessments/{assessment_id}/reports/distribute")
-async def distribute_reports(assessment_id: str, user: UserContext = Depends(get_current_user)):
+async def distribute_reports(
+    assessment_id: str, user: UserContext = Depends(get_current_user)
+):
     """Trigger report distribution to participants.
 
     This endpoint marks reports for distribution. The Orchestrator
@@ -559,6 +626,7 @@ async def distribute_reports(assessment_id: str, user: UserContext = Depends(get
 # ---------------------------------------------------------------------------
 # 10. POST /api/v1/assessments/launch — Combined create + upload + start
 # ---------------------------------------------------------------------------
+
 
 @router.post("/assessments/launch")
 async def launch_assessment(
@@ -597,7 +665,9 @@ async def launch_assessment(
     if not materials:
         raise HTTPException(400, "At least one material file is required")
 
-    logger.info("launch_assessment", title=cfg["assessment_title"], assessor_id=user.user_id)
+    logger.info(
+        "launch_assessment", title=cfg["assessment_title"], assessor_id=user.user_id
+    )
 
     # 1. Create assessment config (assessor_id from JWT, not body)
     assessment = await repo.create_assessment_config(
@@ -616,7 +686,9 @@ async def launch_assessment(
     # 2. Add participants
     participants_added = []
     if cfg.get("participants"):
-        participants_added = await repo.add_participants(assessment_id, cfg["participants"])
+        participants_added = await repo.add_participants(
+            assessment_id, cfg["participants"]
+        )
 
     # 3. Create groups
     groups_created = []
@@ -625,7 +697,9 @@ async def launch_assessment(
         groups_created.append(g)
         for member_email in group.get("members", []):
             all_participants = await repo.get_participants(assessment_id)
-            participant = next((p for p in all_participants if p["email"] == member_email), None)
+            participant = next(
+                (p for p in all_participants if p["email"] == member_email), None
+            )
             if participant:
                 await repo.add_group_member(g["id"], participant["id"])
 
@@ -643,7 +717,9 @@ async def launch_assessment(
             assessment_id=assessment_id,
             file_name=file.filename,
             storage_path=storage_path,
-            file_type=file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "unknown",
+            file_type=file.filename.rsplit(".", 1)[-1].lower()
+            if "." in file.filename
+            else "unknown",
             source="upload",
         )
         materials_uploaded.append(material)
@@ -662,14 +738,18 @@ async def launch_assessment(
             assessment_id=assessment_id,
             file_name=rubric.filename,
             storage_path=storage_path,
-            file_type=rubric.filename.rsplit(".", 1)[-1].lower() if "." in rubric.filename else "unknown",
+            file_type=rubric.filename.rsplit(".", 1)[-1].lower()
+            if "." in rubric.filename
+            else "unknown",
         )
 
     # 6. Start workflow
     workflow_id = f"wf_{uuid.uuid4().hex[:12]}"
     correlation_id = f"corr_{uuid.uuid4().hex[:12]}"
 
-    await repo.update_assessment_status(assessment_id, "material_validation", workflow_id=workflow_id)
+    await repo.update_assessment_status(
+        assessment_id, "material_validation", workflow_id=workflow_id
+    )
 
     await pubsub.publish_workflow_start(
         workflow_id=workflow_id,
@@ -702,6 +782,7 @@ async def launch_assessment(
 # Per api_contract.md Section 2.5
 # ===========================================================================
 
+
 class SubmitAnswersRequest(BaseModel):
     answers: list[dict[str, Any]]  # [{"question_id": "uuid", "answer_content": "..."}]
 
@@ -709,6 +790,7 @@ class SubmitAnswersRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # 11. GET /api/v1/participate/:id — Participant accesses assessment via signed link
 # ---------------------------------------------------------------------------
+
 
 @router.get("/participate/{assessment_id}")
 async def access_assessment(assessment_id: str, token: str):
@@ -732,7 +814,12 @@ async def access_assessment(assessment_id: str, token: str):
     # Check deadline
     if config.get("deadline"):
         from datetime import datetime, timezone
-        deadline = config["deadline"] if isinstance(config["deadline"], str) else config["deadline"].isoformat()
+
+        deadline = (
+            config["deadline"]
+            if isinstance(config["deadline"], str)
+            else config["deadline"].isoformat()
+        )
         if datetime.now(timezone.utc).isoformat() > deadline:
             raise HTTPException(403, "Assessment deadline has passed")
 
@@ -757,8 +844,10 @@ async def access_assessment(assessment_id: str, token: str):
         "deadline": config.get("deadline"),
         "structured_question_count": config.get("structured_question_count"),
         "non_structured_question_count": config.get("non_structured_question_count"),
-        "total_questions": (config.get("structured_question_count", 0)
-                           + config.get("non_structured_question_count", 0)),
+        "total_questions": (
+            config.get("structured_question_count", 0)
+            + config.get("non_structured_question_count", 0)
+        ),
         "status": "ready",
     }
 
@@ -766,6 +855,7 @@ async def access_assessment(assessment_id: str, token: str):
 # ---------------------------------------------------------------------------
 # 12. GET /api/v1/participate/:id/questions — Participant gets questions
 # ---------------------------------------------------------------------------
+
 
 @router.get("/participate/{assessment_id}/questions")
 async def get_participant_questions(assessment_id: str, token: str):
@@ -809,6 +899,7 @@ async def get_participant_questions(assessment_id: str, token: str):
 # ---------------------------------------------------------------------------
 # 13. POST /api/v1/participate/:id/submit — Participant submits assessment
 # ---------------------------------------------------------------------------
+
 
 @router.post("/participate/{assessment_id}/submit")
 async def submit_assessment(assessment_id: str, token: str, req: SubmitAnswersRequest):
@@ -865,6 +956,7 @@ async def submit_assessment(assessment_id: str, token: str, req: SubmitAnswersRe
 # 14. GET /api/v1/reports/:id — Participant views their report (token-based)
 # ---------------------------------------------------------------------------
 
+
 @router.get("/reports/{report_id}")
 async def get_participant_report(report_id: str, token: str):
     """Participant views their report with per-question feedback.
@@ -886,8 +978,11 @@ async def get_participant_report(report_id: str, token: str):
 # 15. GET /api/v1/assessments/:id/reports — Assessor views all reports
 # ---------------------------------------------------------------------------
 
+
 @router.get("/assessments/{assessment_id}/reports")
-async def get_assessment_reports(assessment_id: str, user: UserContext = Depends(get_current_user)):
+async def get_assessment_reports(
+    assessment_id: str, user: UserContext = Depends(get_current_user)
+):
     """Assessor views all participant reports before distributing.
 
     Per api_contract.md Section 2.7.3.
@@ -907,6 +1002,7 @@ async def get_assessment_reports(assessment_id: str, user: UserContext = Depends
 # ---------------------------------------------------------------------------
 # 16. GET /api/v1/assessments/:id/review — Assessor review page
 # ---------------------------------------------------------------------------
+
 
 @router.get("/assessments/{assessment_id}/review")
 async def get_review(assessment_id: str, user: UserContext = Depends(get_current_user)):
@@ -948,6 +1044,7 @@ async def get_review(assessment_id: str, user: UserContext = Depends(get_current
 # 17. GET /api/v1/assessments/:id/topics — Extracted subtopics
 # ---------------------------------------------------------------------------
 
+
 @router.get("/assessments/{assessment_id}/topics")
 async def get_topics(assessment_id: str, user: UserContext = Depends(get_current_user)):
     """Get extracted subtopics for the HITL review sidebar.
@@ -974,6 +1071,7 @@ async def get_topics(assessment_id: str, user: UserContext = Depends(get_current
 # ===========================================================================
 # Helpers
 # ===========================================================================
+
 
 def _extract_participant_from_token(token: str) -> str | None:
     """Extract participant_id from a signed assessment link token.

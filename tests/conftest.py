@@ -38,15 +38,18 @@ app.dependency_overrides[get_current_user] = mock_get_current_user
 # Use a single event loop for all tests (session-scoped)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="session")
 def event_loop_policy():
     import asyncio
+
     return asyncio.DefaultEventLoopPolicy()
 
 
 # ---------------------------------------------------------------------------
 # Database — reset pool + clean tables after each test
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture(autouse=True)
 async def reset_and_clean_db():
@@ -99,6 +102,7 @@ async def reset_and_clean_db():
 # ---------------------------------------------------------------------------
 # HTTP client — uses ASGI transport (no real server needed)
 # ---------------------------------------------------------------------------
+
 
 @pytest_asyncio.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:

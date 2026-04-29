@@ -68,7 +68,9 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
             }
             for q in request.questions
         ]
-        results = await repo.write_generated_questions(request.question_set_id, questions)
+        results = await repo.write_generated_questions(
+            request.question_set_id, questions
+        )
         return submission_pb2.WriteGeneratedQuestionsResponse(
             questions_written=len(results),
             status="success",
@@ -76,7 +78,9 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
 
     # 5. GetGeneratedQuestionsWithAnswers
     async def GetGeneratedQuestionsWithAnswers(self, request, context):
-        results = await repo.get_generated_questions_with_answers(request.question_set_id)
+        results = await repo.get_generated_questions_with_answers(
+            request.question_set_id
+        )
         return submission_pb2.GetGeneratedQuestionsResponse(
             questions=[_dict_to_question_proto(q) for q in results]
         )
@@ -152,14 +156,18 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
         if raw_details and isinstance(raw_details, list):
             for d in raw_details:
                 if isinstance(d, dict) and d.get("id"):
-                    details.append(submission_pb2.EvaluationDetail(
-                        question_id=str(d.get("question_id", "")),
-                        group_evaluation_id=str(d["group_evaluation_id"]) if d.get("group_evaluation_id") else "",
-                        score=float(d.get("score", 0)),
-                        max_score=float(d.get("max_score", 0)),
-                        reasoning=d.get("reasoning") or "",
-                        evaluation_method=d.get("evaluation_method", ""),
-                    ))
+                    details.append(
+                        submission_pb2.EvaluationDetail(
+                            question_id=str(d.get("question_id", "")),
+                            group_evaluation_id=str(d["group_evaluation_id"])
+                            if d.get("group_evaluation_id")
+                            else "",
+                            score=float(d.get("score", 0)),
+                            max_score=float(d.get("max_score", 0)),
+                            reasoning=d.get("reasoning") or "",
+                            evaluation_method=d.get("evaluation_method", ""),
+                        )
+                    )
 
         return submission_pb2.GetEvaluationResponse(
             evaluation_id=result["id"],
@@ -171,7 +179,11 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
 
     # 11. CreateReport
     async def CreateReport(self, request, context):
-        report_content = json.loads(request.report_content_json) if request.report_content_json else {}
+        report_content = (
+            json.loads(request.report_content_json)
+            if request.report_content_json
+            else {}
+        )
         result = await repo.create_report(
             workflow_id=request.workflow_id,
             participant_id=request.participant_id,
@@ -276,6 +288,7 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _dict_to_config_proto(d: dict) -> submission_pb2.AssessmentConfig:
     return submission_pb2.AssessmentConfig(
         assessment_id=str(d.get("id", "")),
@@ -326,6 +339,7 @@ def _dict_to_question_proto(d: dict) -> submission_pb2.Question:
 # ---------------------------------------------------------------------------
 # Server lifecycle
 # ---------------------------------------------------------------------------
+
 
 async def start_grpc_server() -> grpc.aio.Server:
     server = grpc.aio.server(interceptors=[LoggingInterceptor()])

@@ -74,6 +74,7 @@ Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 # Structured error handlers (M-1 fix)
 # ---------------------------------------------------------------------------
 
+
 def _error_response(status: int, error: str, message: str) -> JSONResponse:
     return JSONResponse(
         status_code=status,
@@ -104,9 +105,14 @@ async def generic_error_handler(request: Request, exc: Exception):
 # Health / Readiness
 # ---------------------------------------------------------------------------
 
+
 @app.get("/health")
 async def health():
-    return {"status": "healthy", "service": "submission-service", "grpc_port": config.GRPC_PORT}
+    return {
+        "status": "healthy",
+        "service": "submission-service",
+        "grpc_port": config.GRPC_PORT,
+    }
 
 
 @app.get("/ready")
@@ -114,9 +120,15 @@ async def ready():
     try:
         pool = await get_pool()
         await pool.fetchval("SELECT 1")
-        return {"status": "ready", "database": "connected", "grpc_port": config.GRPC_PORT}
+        return {
+            "status": "ready",
+            "database": "connected",
+            "grpc_port": config.GRPC_PORT,
+        }
     except Exception as exc:
-        return JSONResponse(status_code=503, content={"status": "not_ready", "error": str(exc)})
+        return JSONResponse(
+            status_code=503, content={"status": "not_ready", "error": str(exc)}
+        )
 
 
 if __name__ == "__main__":
