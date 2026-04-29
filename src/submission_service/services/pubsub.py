@@ -121,7 +121,9 @@ async def publish_submission_completed(
             "submission_id": submission_id,
         },
     )
-    return await _publish_async("assessorflow.participant.submission-completed", envelope)
+    return await _publish_async(
+        "assessorflow.participant.submission-completed", envelope
+    )
 
 
 async def _publish_async(topic_name: str, envelope: dict, max_retries: int = 3) -> str:
@@ -152,7 +154,7 @@ async def _publish_async(topic_name: str, envelope: dict, max_retries: int = 3) 
                 error=str(e),
             )
             if attempt < max_retries:
-                await asyncio.sleep(2 ** attempt)  # exponential backoff: 2s, 4s, 8s
+                await asyncio.sleep(2**attempt)  # exponential backoff: 2s, 4s, 8s
 
     logger.error(
         "pubsub_publish_failed",

@@ -56,6 +56,7 @@ async def _fetch_jwks_key() -> dict:
 def _build_public_key(jwk: dict):
     """Build an RSA public key from JWK parameters."""
     from jwt.algorithms import RSAAlgorithm
+
     return RSAAlgorithm.from_jwk(jwk)
 
 

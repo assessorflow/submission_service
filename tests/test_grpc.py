@@ -19,6 +19,7 @@ async def main():
 
     # --- Setup: Create assessment via REST first (we need an assessment_id) ---
     import httpx
+
     async with httpx.AsyncClient() as client:
         resp = await client.post(
             "http://host.docker.internal:8060/api/v1/assessments",
@@ -57,7 +58,9 @@ async def main():
     resp = await stub.GetAssessmentConfig(
         submission_pb2.GetAssessmentConfigRequest(workflow_id=workflow_id)
     )
-    print(f"   title={resp.config.assessment_title}, workflow={resp.config.workflow_id}")
+    print(
+        f"   title={resp.config.assessment_title}, workflow={resp.config.workflow_id}"
+    )
 
     # 2. GetMaterials
     print("\n2. GetMaterials...")
@@ -110,22 +113,31 @@ async def main():
                     question_type="structured",
                     content="Which OOP concept bundles data with methods?",
                     structured_answer="A",
-                    metadata_json=json.dumps({
-                        "options": {"A": "Encapsulation", "B": "Polymorphism", "C": "Inheritance", "D": "Abstraction"},
-                        "source_chunk_ids": ["chunk_101"],
-                        "difficulty": "easy",
-                    }),
+                    metadata_json=json.dumps(
+                        {
+                            "options": {
+                                "A": "Encapsulation",
+                                "B": "Polymorphism",
+                                "C": "Inheritance",
+                                "D": "Abstraction",
+                            },
+                            "source_chunk_ids": ["chunk_101"],
+                            "difficulty": "easy",
+                        }
+                    ),
                     iteration=1,
                 ),
                 submission_pb2.Question(
                     question_type="non_structured",
                     content="Explain the difference between encapsulation and abstraction.",
                     non_structured_model_answer="Encapsulation hides data, abstraction hides implementation details.",
-                    metadata_json=json.dumps({
-                        "rubric": "Award marks for identifying at least 2 differences.",
-                        "max_marks": 10,
-                        "source_chunk_ids": ["chunk_101", "chunk_205"],
-                    }),
+                    metadata_json=json.dumps(
+                        {
+                            "rubric": "Award marks for identifying at least 2 differences.",
+                            "max_marks": 10,
+                            "source_chunk_ids": ["chunk_101", "chunk_205"],
+                        }
+                    ),
                     iteration=1,
                 ),
             ],
@@ -157,7 +169,9 @@ async def main():
     print(f"   approved_count={len(resp.questions)} (expected 0)")
 
     # 8. CreateEvaluation (skip — needs approved questions + submissions first)
-    print("\n8. CreateEvaluation — skipped (needs approved questions + participant submissions)")
+    print(
+        "\n8. CreateEvaluation — skipped (needs approved questions + participant submissions)"
+    )
 
     # 9. CreateGroupEvaluation (skip — needs groups + submissions)
     print("\n9. CreateGroupEvaluation — skipped (needs group setup)")
@@ -172,8 +186,8 @@ async def main():
 
     print("\n" + "=" * 60)
     print("gRPC test complete!")
-    print(f"  Tested: 1, 1b, 2, 2b, 3, 4, 5, 6, 7, 12, 13")
-    print(f"  Skipped: 8, 9, 10, 11 (need full workflow data)")
+    print("  Tested: 1, 1b, 2, 2b, 3, 4, 5, 6, 7, 12, 13")
+    print("  Skipped: 8, 9, 10, 11 (need full workflow data)")
     print("=" * 60)
 
 

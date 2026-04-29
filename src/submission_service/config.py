@@ -22,6 +22,8 @@ GCP_PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "aflow-491809")
 
 # Identity Service (for JWT validation)
 IDENTITY_GRPC_HOST = os.environ.get("IDENTITY_GRPC_HOST", "localhost:9090")
-IDENTITY_JWKS_URL = os.environ.get("IDENTITY_JWKS_URL", "http://localhost:8081/.well-known/jwks.json")
+IDENTITY_JWKS_URL = os.environ.get(
+    "IDENTITY_JWKS_URL", "http://localhost:8081/.well-known/jwks.json"
+)
 JWT_ISSUER = os.environ.get("JWT_ISSUER", "assessorflow")
 JWT_AUDIENCE = os.environ.get("JWT_AUDIENCE", "assessorflow-api")

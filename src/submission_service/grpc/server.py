@@ -1,6 +1,6 @@
 """gRPC server for Assessment Submission Service.
 
-All 13 internal RPCs delegate to the same repository that REST endpoints use.
+All 16 internal RPCs delegate to the same repository that REST endpoints use.
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ logger = structlog.get_logger(__name__)
 
 
 class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
-    """Implements all 13 gRPC RPCs defined in submission.proto."""
+    """Implements all 16 gRPC RPCs defined in submission.proto."""
 
     # 1. GetAssessmentConfig
     async def GetAssessmentConfig(self, request, context):
@@ -68,7 +68,9 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
             }
             for q in request.questions
         ]
-        results = await repo.write_generated_questions(request.question_set_id, questions)
+        results = await repo.write_generated_questions(
+            request.question_set_id, questions
+        )
         return submission_pb2.WriteGeneratedQuestionsResponse(
             questions_written=len(results),
             status="success",
@@ -76,7 +78,9 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
 
     # 5. GetGeneratedQuestionsWithAnswers
     async def GetGeneratedQuestionsWithAnswers(self, request, context):
-        results = await repo.get_generated_questions_with_answers(request.question_set_id)
+        results = await repo.get_generated_questions_with_answers(
+            request.question_set_id
+        )
         return submission_pb2.GetGeneratedQuestionsResponse(
             questions=[_dict_to_question_proto(q) for q in results]
         )
@@ -152,14 +156,18 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
         if raw_details and isinstance(raw_details, list):
             for d in raw_details:
                 if isinstance(d, dict) and d.get("id"):
-                    details.append(submission_pb2.EvaluationDetail(
-                        question_id=str(d.get("question_id", "")),
-                        group_evaluation_id=str(d["group_evaluation_id"]) if d.get("group_evaluation_id") else "",
-                        score=float(d.get("score", 0)),
-                        max_score=float(d.get("max_score", 0)),
-                        reasoning=d.get("reasoning") or "",
-                        evaluation_method=d.get("evaluation_method", ""),
-                    ))
+                    details.append(
+                        submission_pb2.EvaluationDetail(
+                            question_id=str(d.get("question_id", "")),
+                            group_evaluation_id=str(d["group_evaluation_id"])
+                            if d.get("group_evaluation_id")
+                            else "",
+                            score=float(d.get("score", 0)),
+                            max_score=float(d.get("max_score", 0)),
+                            reasoning=d.get("reasoning") or "",
+                            evaluation_method=d.get("evaluation_method", ""),
+                        )
+                    )
 
         return submission_pb2.GetEvaluationResponse(
             evaluation_id=result["id"],
@@ -171,7 +179,11 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
 
     # 11. CreateReport
     async def CreateReport(self, request, context):
-        report_content = json.loads(request.report_content_json) if request.report_content_json else {}
+        report_content = (
+            json.loads(request.report_content_json)
+            if request.report_content_json
+            else {}
+        )
         result = await repo.create_report(
             workflow_id=request.workflow_id,
             participant_id=request.participant_id,
@@ -201,7 +213,48 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
             status="success",
         )
 
-    # 13. StartWorkflow
+    # 13. GetGroupMemberSubmissions
+    async def GetGroupMemberSubmissions(self, request, context):
+        result = await repo.get_group_member_submissions(
+            group_id=request.group_id,
+            question_id=request.question_id,
+        )
+        submissions = [
+            submission_pb2.GroupMemberSubmission(
+                participant_id=str(s.get("participant_id", "")),
+                participant_email=s.get("participant_email", ""),
+                answer_content=s.get("answer_content", ""),
+            )
+            for s in result.get("submissions", [])
+        ]
+        return submission_pb2.GetGroupMemberSubmissionsResponse(
+            group_id=result.get("group_id", ""),
+            group_name=result.get("group_name", ""),
+            question_id=result.get("question_id", ""),
+            question_text=result.get("question_text", ""),
+            submissions=submissions,
+        )
+
+    # 14. UpdateAssessmentStatus
+    async def UpdateAssessmentStatus(self, request, context):
+        await repo.update_assessment_status(
+            assessment_id=request.assessment_id,
+            status=request.status,
+            workflow_id=request.workflow_id or None,
+        )
+        return submission_pb2.UpdateAssessmentStatusResponse(status="updated")
+
+    # 15. UpdateMaterialValidation
+    async def UpdateMaterialValidation(self, request, context):
+        await repo.update_material_validation(
+            material_id=request.material_id,
+            readiness_status=request.readiness_status,
+            validation_reason_code=request.validation_reason_code or None,
+            validation_message=request.validation_message or None,
+        )
+        return submission_pb2.UpdateMaterialValidationResponse(status="updated")
+
+    # 16. StartWorkflow
     async def StartWorkflow(self, request, context):
         from submission_service.services import pubsub
         import uuid
@@ -234,6 +287,7 @@ class SubmissionServiceServicer(submission_pb2_grpc.SubmissionServiceServicer):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _dict_to_config_proto(d: dict) -> submission_pb2.AssessmentConfig:
     return submission_pb2.AssessmentConfig(
@@ -285,6 +339,7 @@ def _dict_to_question_proto(d: dict) -> submission_pb2.Question:
 # ---------------------------------------------------------------------------
 # Server lifecycle
 # ---------------------------------------------------------------------------
+
 
 async def start_grpc_server() -> grpc.aio.Server:
     server = grpc.aio.server(interceptors=[LoggingInterceptor()])

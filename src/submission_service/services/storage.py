@@ -22,7 +22,9 @@ def _get_client() -> storage.Client:
     global _client
     if _client is None:
         if config.GCS_CREDENTIALS_PATH:
-            _client = storage.Client.from_service_account_json(config.GCS_CREDENTIALS_PATH)
+            _client = storage.Client.from_service_account_json(
+                config.GCS_CREDENTIALS_PATH
+            )
         else:
             _client = storage.Client()
         logger.info("gcs_client_created", bucket=config.GCS_BUCKET)
@@ -58,7 +60,9 @@ async def upload_file(
     """
     blob_path = f"{assessment_id}/{folder}/{file_name}"
     loop = asyncio.get_event_loop()
-    storage_path = await loop.run_in_executor(None, partial(_upload_sync, blob_path, file_content))
+    storage_path = await loop.run_in_executor(
+        None, partial(_upload_sync, blob_path, file_content)
+    )
     logger.info("file_uploaded", path=storage_path)
     return storage_path
 

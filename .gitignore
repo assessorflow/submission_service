@@ -2,4 +2,7 @@ gcs-credentials.json
 grpc-stubs/
 __pycache__/
 *.pyc
+*.egg-info/
 .env
+.pytest_cache/
+.deepeval/
